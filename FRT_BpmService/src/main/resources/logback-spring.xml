@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml" />
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>
+                %d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n
+            </Pattern>
+        </layout>
+    </appender>
+    <appender name="EVERYDAY" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>../../data/log/application/%d{yyyyMMdd}/bpmservice.log</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>[%level] %d{yyyy-MM-dd HH:mm:ss} [%class:%line] - %m%n</pattern>
+        </encoder>
+    </appender>
+    <!-- 异步输出 -->
+    <appender name ="ASYNC" class= "ch.qos.logback.classic.AsyncAppender">
+        <!-- 不丢失日志.默认的,如果队列的80%已满,则会丢弃TRACT、DEBUG、INFO级别的日志 -->
+        <discardingThreshold >0</discardingThreshold>
+        <!-- 更改默认的队列的深度,该值会影响性能.默认值为256 -->
+        <queueSize>10000</queueSize>
+        <!-- 添加附加的appender,最多只能添加一个 -->
+        <appender-ref ref ="EVERYDAY"/>
+    </appender>
+
+    <root level="INFO" additivity="false">
+        <appender-ref ref ="STDOUT"/>
+        <appender-ref ref ="ASYNC"/>
+    </root>
+</configuration>

@@ -1,0 +1,369 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Activiti模板设计</title>
+<link rel="stylesheet" type="text/css" href="http://cdn.datatables.net/1.10.12/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="http://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
+
+<link rel="stylesheet" href="//apps.bdimg.com/libs/jqueryui/1.10.4/css/jquery-ui.min.css">
+<script src="//apps.bdimg.com/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+<!--<link rel="stylesheet" href="public/css/style.css">-->
+ <style>
+	 body{
+		 /*background-color:#2A3F54;*/
+		 background-color:#2a8198;
+	 }
+	 #datatable thead tr{
+		 background-color: whitesmoke;
+	 }
+	 #datatable_info{
+		 color: whitesmoke;
+	 }
+	 #datatable_next{
+		 color: whitesmoke;
+	 }
+	 #datatable_previous{
+		 color: whitesmoke;
+	 }
+	 #datatable_length label{
+		 color: whitesmoke;
+	 }
+
+	 #datatable2 thead tr{
+		 background-color: whitesmoke;
+	 }
+	 #datatable2_info{
+		 color: whitesmoke;
+	 }
+	 #datatable2_next{
+		 color: whitesmoke;
+	 }
+	 #datatable_paginate a{
+		 color: whitesmoke;
+	 }
+	 #datatable2_length label{
+		 color: whitesmoke;
+	 }
+	 table.dataTable.no-footer {
+		 margin-left: 0px;
+	 }
+	 #datatable td a {
+		 background-color: #2a8198;
+		 padding: 0 20px;
+		 color: white;
+		 text-decoration:none
+	 }
+	 #datatable td a:hover{
+		 background-color: #3c763d;
+		 padding: 0 20px;
+		 color: white;
+		 text-decoration:none
+	 }
+    body { font-size: 62.5%; }
+    label, input { display:block; }
+    input.text { margin-bottom:12px; width:95%; padding: .4em; }
+    fieldset { padding:0; border:0; margin-top:25px; }
+    h1 { font-size: 1.2em; margin: .6em 0; }
+    div#users-contain { width: 350px; margin: 20px 0; }
+    div#users-contain table { margin: 1em 0; border-collapse: collapse; width: 100%; }
+    div#users-contain table td, div#users-contain table th { border: 1px solid #eee; padding: .6em 10px; text-align: left; }
+    .ui-dialog .ui-state-error { padding: .3em; }
+    .validateTips { border: 1px solid transparent; padding: 0.3em; }
+
+  </style>
+
+<script type="text/javascript">
+		    $(document).ready(function() {
+		    	var table =$("#datatable").DataTable({
+					"serverSide": true, //开启服务器处理模式
+					"bProcessing" : true, //是否显示加载
+					"searching": false,
+					"sServerMethod": "POST",
+					"sAjaxSource" : "queryDesignModel",
+					"columns": [
+						{"data": "key"},
+						{"data": "name"},
+						{"data": "metaInfo"},
+						{"data": "tenantId"},
+						{"data": "oper","render": function(data, type, full) {
+							return "<a href='/BpmService/modeler.html?modelId="+full.id+"'>设计</a>&nbsp;&nbsp;"+
+								   "<a href='javascript:void(0);' onclick='showDeploy("+full.id+")'>部署</a>&nbsp;&nbsp;"+
+								   "<a href='javascript:void(0);' onclick='deleteModel("+full.id+")' style='background-color: red'>删除</a>&nbsp;&nbsp;"+
+								   "<a href='javascript:void(0);' onclick='cleanModel("+full.id+")'  style='background-color: #4cae4c'>清理</a>";
+						 }}	
+					],
+					"oLanguage": { //显示中文  
+                    "sProcessing" : "正在获取数据，请稍后...",    
+                    "sLengthMenu" : "显示 _MENU_ 条",    
+                    "sZeroRecords" : "没有您要搜索的内容",    
+                    "sInfo" : "从 _START_ 到  _END_ 条记录 总显示记录数为 _TOTAL_ 条",    
+                    "sInfoEmpty" : "记录数为0",    
+                    "sInfoFiltered" : "(共显示 _MAX_ 条数据)",    
+                    "sInfoPostFix" : "",    
+                    "oPaginate": {    
+                        "sFirst" : "第一页",    
+                        "sPrevious" : "上一页",    
+                        "sNext" : "下一页",    
+                        "sLast" : "最后一页"    
+                    }  
+                },
+           
+           "fnServerData": function(sSource, aoData, fnCallback){
+									  $.ajax( { 
+												  'type' : 'post', 
+												  "url": sSource, 
+												  "dataType": "json", 
+												  "data": { "aodata" : JSON.stringify(aoData) },
+												  "success": function(resp) { 
+												   fnCallback(resp);
+												  } 
+  									}); 
+ },
+				});
+				
+				var name = $( "#name" ),
+			      email = $( "#email" ),
+			      password = $( "#password" ),
+			      allFields = $( [] ).add( name ).add( email ).add( password ),
+			      tips = $( ".validateTips" );
+			 
+			    function updateTips( t ) {
+			      tips
+			        .text( t )
+			        .addClass( "ui-state-highlight" );
+			      setTimeout(function() {
+			        tips.removeClass( "ui-state-highlight", 1500 );
+			      }, 500 );
+			    }
+			 
+			    $( "#dialog-form" ).dialog({
+			      autoOpen: false,
+			      height: 380,
+			      width: 550,
+			      modal: true,
+			      buttons: {
+			        "创建": function() {
+			          var bValid = true;
+			          allFields.removeClass( "ui-state-error" );
+			          
+			          if ( bValid ) {
+			            $( "#users tbody" ).append( "<tr>" +
+			              "<td>" + name.val() + "</td>" +
+			              "<td>" + email.val() + "</td>" +
+			              "<td>" + password.val() + "</td>" +
+			            "</tr>" );
+			            $( this ).dialog( "close" );
+			          }
+			        $.post("create",{name:$('#modelName').val(),
+			        	  key:$('#key').val(),
+			        	  description:$('#description').val()
+						},  
+						function(data){
+						alert("创建成功！");
+						table.ajax.reload();
+						table2.ajax.reload();
+					});
+			          
+			          
+			        },
+			        "取消": function() {
+			          $( this ).dialog( "close" );
+			        }
+			      },
+			      close: function() {
+			        allFields.val( "" ).removeClass( "ui-state-error" );
+			      }
+			    });
+			    
+			    $( "#dialog-form-deploy" ).dialog({
+				      autoOpen: false,
+				      height: 170,
+				      width: 400,
+				      modal: true,
+				      buttons: {
+				        "确定": function() {
+				          var bValid = true;
+				          allFields.removeClass( "ui-state-error" );
+				          
+				          $.post("deployModel",{
+				        	  modelId:$('#modelId').val()
+							},  
+							function(data){
+								if(data==1){
+									alert("部署成功！");
+									$( this ).dialog( "close" );
+									$("#datatable").dataTable().fnDraw();
+									$("#datatable2").dataTable().fnDraw();
+								}else{
+									alert("部署失败！");	
+									$( this ).dialog( "close" );
+									$("#datatable").dataTable().fnDraw();
+									$("#datatable2").dataTable().fnDraw();
+								}
+						});
+				          
+				        },
+				        "取消": function() {
+				          $( this ).dialog( "close" );
+				        }
+				      },
+				      close: function() {
+				        allFields.val( "" ).removeClass( "ui-state-error" );
+				      }
+				    });
+			 
+			    $( "#create-user" )
+			      .button()
+			      .click(function() {
+			        $( "#dialog-form" ).dialog( "open" );
+			        
+			      });
+			    
+			    
+			    
+			    
+			    
+			    
+			    
+			    
+			    //已部署流程查询
+			    var table2=$("#datatable2").DataTable({
+					"serverSide": true, //开启服务器处理模式
+					"bProcessing" : true, //是否显示加载
+					"searching": false,
+					"sServerMethod": "POST",
+					"sAjaxSource" : "queryDesignModel",
+					"columns": [
+						{"data": "key"},
+						{"data": "name"},
+						{"data": "metaInfo"},
+						{"data": "tenantId"},
+						{"data": "deploymentId","render": function(data, type, full) {
+							if(full.deploymentId==""||full.deploymentId==null){
+								return "<label style='color: red'>未部署</label>"
+							}
+							return "<label style='color: green'>已部署</label>"
+						 }}
+					],
+					"oLanguage": { //显示中文  
+                    "sProcessing" : "正在获取数据，请稍后...",    
+                    "sLengthMenu" : "显示 _MENU_ 条",    
+                    "sZeroRecords" : "没有您要搜索的内容",    
+                    "sInfo" : "从 _START_ 到  _END_ 条记录 总显示记录数为 _TOTAL_ 条",    
+                    "sInfoEmpty" : "记录数为0",    
+                    "sInfoFiltered" : "(共显示 _MAX_ 条数据)",    
+                    "sInfoPostFix" : "",    
+                    "oPaginate": {    
+                        "sFirst" : "第一页",    
+                        "sPrevious" : "上一页",    
+                        "sNext" : "下一页",    
+                        "sLast" : "最后一页"    
+                    }  
+                },
+           
+           "fnServerData": function(sSource, aoData, fnCallback){
+									  $.ajax( { 
+												  'type' : 'post', 
+												  "url": sSource, 
+												  "dataType": "json", 
+												  "data": { "aodata" : JSON.stringify(aoData) },
+												  "success": function(resp) { 
+												   fnCallback(resp);
+												  } 
+  									}); 
+ },
+				});
+			    
+			    
+			    
+			    
+			  });
+		    
+		    
+		    function deleteModel(obj){
+		    	 $.post("deleteModel",{modelId:obj},  
+					function(data){
+					alert("删除成功！");
+					$("#datatable").dataTable().fnDraw();
+					$("#datatable2").dataTable().fnDraw();
+				});
+		    }
+		    
+		    function cleanModel(obj){
+		    	 $.post("cleanModel",{modelId:obj},  
+					function(data){
+					alert("清理成功！");
+					$("#datatable").dataTable().fnDraw();
+					$("#datatable2").dataTable().fnDraw();
+				});
+		    }
+		    
+		    function showDeploy(modelId){
+		    	 $("#modelId").val(modelId);
+		    	 $( "#dialog-form-deploy" ).dialog( "open" );
+		    }
+	</script>
+</head>
+
+<body class="easyui-layout">
+	<p style="font-size: 25px; color: white;text-align: center">PROCESS MODEL DESIGN</p>
+	<!-- <a href="http://localhost:8080/demo/model/create?name=processName&key=processModel&description=processDes">创建模型</a> -->
+	<p><button id="create-user"  style="background-color: #4cae4c">创建模型</button></p>
+	<div style="border: dashed 1px white;border-radius:10px;padding: 20px 20px">
+		<p style="color: white;margin-top: -29px">流程模型设计</p>
+		<table id="datatable" class="display">
+			<thead>
+			<tr>
+				<th>模型Key</th>
+				<th>模型名称</th>
+				<th>创建时间</th>
+				<th>最后修改时间</th>
+				<th>操作</th>
+			</tr>
+			<thead>
+			<tbody></tbody>
+		</table>
+	</div>
+	 
+	<div id="dialog-form" title="创建新模型">
+		  <p class="validateTips">所有的表单字段都是必填的。</p>
+		  <form>
+		  <fieldset>
+		    <label for="modelName">模型名称</label>
+		    <input type="text" name="modelName" id="modelName" class="text ui-widget-content ui-corner-all">
+		    <label for="text">模型KEY</label>
+		    <input type="text" name="key" id="key" value="" class="text ui-widget-content ui-corner-all">
+		    <label for="description">模型描述</label>
+		    <input type="text" name="description" id="description" value="" class="text ui-widget-content ui-corner-all">
+		  </fieldset>
+		  </form>
+	</div>
+	
+	<div id="dialog-form-deploy" title="部署">
+		  <p class="validateTips">确定部署流程吗？</p>
+		  <input type="hidden" id="modelId" />
+	</div>
+	
+	<!--<hr style="margin-top: 100px;"/>-->
+	
+	
+
+	<div style="border: dashed 1px white;border-radius:10px;padding: 20px 20px;margin-top: 30px;">
+		<p style="color: white;margin-top: -30px">流程部署查询</p>
+		<table id="datatable2" class="display">
+				<thead>
+					<tr>
+						<th>模型Key</th>
+						<th>模型名称</th>
+						<th>创建时间</th>
+						<th>最后修改时间</th>
+						<th>部署状态</th>
+					</tr>
+				<thead>
+				<tbody></tbody>
+		</table>
+	</div>
+</body>
+</html>
